@@ -1,0 +1,500 @@
+---
+title: "Trabajo Final: La anemia en el año 2021"
+author: "Rosario Ramos"
+output:
+  rmdformats::readthedown:
+    code_folding: show
+    self_contained: true
+    thumbnails: false
+    lightbox: false
+pkgdown:
+  as_is: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, fig.align = "center", warning = FALSE, results = "hide", fig.keep = "all",fig.width =7 ,fig.height = 4,  results = 'asis')
+```
+
+```{r}
+#librerias
+library(rmdformats)
+library(tidyverse)
+library(rio)
+library(lubridate)
+library(kableExtra)
+library(sf)
+
+#data
+df=read.csv("https://docs.google.com/spreadsheets/d/e/2PACX-1vRCdS7d5R9dlrrjfm40dpgNM7qSNM5g2Pjh7yTo0ROD8ktnXFhOHiV3L9S7AVgX4g/pub?output=csv",encoding="UTF-8")
+ubig=read.csv("https://docs.google.com/spreadsheets/d/e/2PACX-1vTHrsPJlW1NE7ma8--Q9O4LSK2QGD8CXam9qBPRMTOY8xC8mV1Qfw-hwRr3rsSblw/pub?output=csv",encoding="UTF-8")
+```
+
+```{r}
+#Limpieza y formato de data
+ubig=ubig %>% 
+  select(id_ubigeo,DEPARTAMENTO=departamento,PROVINCIA=provincia,DISTRITO=distrito,macroregion_minsa,pob_distrito,pob_provincia,pob_departamento)
+
+df=df %>% 
+  mutate(Fecha_atencion=ymd(Fecha_atencion),
+         mes=month(Fecha_atencion),
+         mes=case_when(mes=="1"~"Enero",
+                       mes=="2"~"Febrero",
+                       mes=="3"~"Marzo",
+                       mes=="4"~"Abril",
+                       mes=="5"~"Mayo",
+                       mes=="6"~"Junio",
+                       mes=="7"~"Julio",
+                       mes=="8"~"Agosto",
+                       mes=="9"~"Septiembre",
+                       mes=="10"~"Octubre",
+                       mes=="11"~"Noviembre",
+                       mes=="12"~"Diciembre")) %>% 
+  left_join(ubig,by="id_ubigeo")
+
+df$mes=factor(df$mes,levels=c("Noviembre","Octubre","Septiembre","Agosto","Julio","Junio","Mayo","Abril","Marzo","Febrero","Enero",ordered=TRUE))
+```
+
+
+En el Perú, la anemia es un problema de salud pública que afecta a niños, jóvenes y adultos, pero con mayor énfasis en los infantes Esta enfermedad deteriora la calidad de vida de quienes lo padecen generando consecuencias crónicas. Los principales afectados son los niños menores a 3 años, ya que los estudios demuestran que las secuelas limitan tanto su desarrollo físico como mental (Dávila, Paucar-Zegarra y Quispe, 2018). Las características de la anemia son las siguientes:
+
+  1) Cansancio y palidez
+  2) Incremento del sueño
+  3) Pérdida de apetito
+  4) Irritabilidad
+  5) Mareos
+
+Esta enfermedad además de afectar a la población, afecta también al país en su conjunto debido a que la calidad de los profesionales se ve comprometida en aquellas personas que han sufrido de niveles muy altos de anemia a muy temprana edad. Por ello, es un tema relevante que debe estar en constante evaluación para ofrecer soluciones que se adapten a las necesidades de cada territorio.
+
+La pandemia del COVID-19 ha sido en el último año uno de los obstáculos en la lucha contra la anemia, pero según el Ministerio de salud (2021) ya están en marcha una serie de medidas que han logrado incrementar el tratamiento contra la anemia para niños entre 6 a 11 meses. Se ha pasado de aplicar el tratamiento con hierro al 85.7% a una cifra relativamente mayor: 92%. Como se mostrará en los siguientes gráficos, la prevalencia de anemia en niños menores de 1 años es bastante alta, por lo que implica una mayor atención del personal de salud.
+
+La preguntas que guían esta reportes son la siguientes: 
+
+  * Pregunta general: ¿Cómo se ha distribuido los casos de anemia en el año 2021?
+  * Pregunta específica 1: ¿En qué departamento existe una tasa más alta de anemia y en cuál menos?
+  * Pregunta específica 2: ¿Cuál es la relación entre el acceso a agua mediante red pública y el número de casos de anemia?
+
+Se plantea como hipótesis general que los casos han ido en ascenso por las consecuencias que ha tenido la pandemia para el Estado, obligando a disminuir los recursos en otros sectores que no involucran el COVID-19. Asimismo, se plantea que la zona oriente que integra a los departamentos de la selva ha sido la más afectada por anemia debido a la creciente contaminación de ríos y la escasa presencia estatal. Se sostiene que la falta de acceso a agua mediante red pública  tiene correlación con el número de casos de anemia.
+
+A continuación se presentará el reporte  sobre los casos de anemia en el año 2021 (solo considerando hasta Noviembre), el cual espera plantear un diagnóstico de la situación actual en torno a esta enfermedad. Primero se explorará el comportamiento de los casos distribuidos según mes y luego según departamento. Finalmente, se presentará un gráfico de dispersión de la relación que existe en el acceso a agua mediante red pública y el número de casos de anemia por departamento. 
+
+Las bases que han sido utilizadas para el reporte son las siguientes:
+
+  - Encuesta Nacional de Hogares (INEI, 2021)
+  - Morbilidad: Anemia (Plataforma de Datos Abiertos, 2021)
+  - Códigos equivalentes de UBIGEO del Perú (Plataforma de Datos Abiertos, 2021) 
+
+## 1. Casos diagnosticados según mes
+
+### 1.1 General
+
+```{r}
+tabla_mes=df %>% 
+  group_by(mes) %>% 
+  summarise(Casos_Diagnosticados=n())
+
+tabla_mes %>% #data
+  ggplot(aes(x=mes,y=Casos_Diagnosticados))+
+  ggplot2::geom_bar(stat="identity", 
+                    position = position_dodge(),
+                          fill="lightsalmon")+
+  ggplot2::geom_text(aes(label=Casos_Diagnosticados), size=3, vjust=0.5,hjust=0)+
+  labs(y="Número de casos de anemia",x="Mes")+
+  ggtitle("Número de casos de anemia en el año 2021")+
+  coord_flip()+
+  ylim(0,13000)+
+  theme_light()+
+  theme (plot.title = element_text(size=rel(1),vjust=0.5,
+                                   hjust=0.5,face="bold",
+                                   color="black", lineheight=1.5),
+         plot.caption = element_text(color = "black", face = "italic",size=7.7),
+         legend.title = element_text( size = 10, vjust=0.5,hjust=0.5),
+         legend.text = element_text(size = 9),
+         legend.position = "bottom",
+         legend.spacing.x = unit(0.5, 'cm')) 
+
+```
+
+
+### 1.2. Porcentaje según mes y sexo
+
+```{r}
+tabla_mes=df %>% 
+  mutate(Sexo=ifelse(Sexo=="F","Mujer","Hombre")) %>% 
+  group_by(mes,Sexo) %>% 
+  summarise(Casos_Diagnosticados=n()) %>% 
+  ungroup() %>% 
+  group_by(mes) %>% 
+  summarise(Sexo,Casos_Diagnosticados,total=sum(Casos_Diagnosticados)) %>% 
+  mutate(Porc=round(Casos_Diagnosticados/total*100,2))
+
+tabla_mes %>% #data
+  ggplot(aes(x=mes,y=Porc,fill=Sexo,order=Porc))+
+  ggplot2::geom_bar(stat="identity")+
+  ggplot2::geom_text(aes(x =mes , y = Porc, label = Porc, group = Sexo),
+                position = position_stack(vjust = .6),inherit.aes = T,fontface="bold", size=3)+
+  labs(y="Porcentaje de casos de anemia",x="Mes")+
+  ggtitle("Porcentaje de casos de anemia en el año 2021, según mes y sexo")+
+  coord_flip()+
+  scale_fill_manual(values=c("lightcyan3","lightsalmon2"))+
+  theme_light()+
+  theme (plot.title = element_text(size=rel(1),vjust=0.5,
+                                   hjust=0.5,face="bold",
+                                   color="black", lineheight=1.5),
+         plot.caption = element_text(color = "black", face = "italic",size=7.7),
+         legend.title = element_text( size = 10, vjust=0.5,hjust=0.5),
+         legend.text = element_text(size = 9),
+         legend.position = "bottom",
+         legend.spacing.x = unit(0.5, 'cm')) 
+```
+
+
+
+### 1.3. Porcentaje según grupos de edad
+
+```{r,fig.width =9 ,fig.height = 4}
+tabla_mes=df %>% 
+  mutate(GrupoEdad=case_when(Tipo_edad=="D"~"Menor de 1 mes",
+                             Tipo_edad=="M"~"Menor de 1 año",
+                             Tipo_edad=="A" & Edad %in% c(1:3)~"1-3 años",
+                             Tipo_edad=="A" & Edad %in% c(4:6)~"4-6 años",
+                             Tipo_edad=="A" & Edad %in% c(7:9)~"7-9 años",
+                             Tipo_edad=="A" & Edad %in% c(10:11)~"10-11 años")) %>% 
+  group_by(mes,GrupoEdad) %>% 
+  summarise(Casos_Diagnosticados=n()) %>% 
+  ungroup() %>% 
+  group_by(mes) %>% 
+  summarise(GrupoEdad,Casos_Diagnosticados,total=sum(Casos_Diagnosticados)) %>% 
+  mutate(Porc=round(Casos_Diagnosticados/total*100,2))
+
+
+#tabla_mes$GrupoEdad=factor(tabla_mes$GrupoEdad,levels=c("10-11 años","7-9 años","4-6 años","1-3 años","Menor de 1 año","Menor de 1 mes",ordered=TRUE))
+tabla_mes$GrupoEdad=factor(tabla_mes$GrupoEdad,levels=c("Menor de 1 mes","Menor de 1 año","1-3 años","4-6 años","7-9 años","10-11 años",ordered=TRUE))
+
+tabla_mes %>% #data
+  ggplot(aes(x=mes,y=Porc,fill=GrupoEdad,order=Porc))+
+  ggplot2::geom_bar(stat="identity")+
+  ggplot2::geom_text(aes(x =mes , y = Porc, label = Porc, group = GrupoEdad),
+                position = position_stack(vjust = .6),inherit.aes = T,fontface="bold", size=3)+
+  labs(y="Porcentaje de casos de anemia",x="Mes")+
+  ggtitle("Porcentaje de casos de anemia en el año 2021, según mes y grupo etario")+
+  coord_flip()+
+  scale_fill_manual(values=c("slateblue1","thistle3","lightsalmon2","turquoise3","turquoise4","steelblue4"))+
+  theme_light()+
+  theme (plot.title = element_text(size=rel(1),vjust=0.5,
+                                   hjust=0.5,face="bold",
+                                   color="black", lineheight=1.5),
+         plot.caption = element_text(color = "black", face = "italic",size=7.7),
+         legend.title = element_text( size = 10, vjust=0.5,hjust=0.5),
+         legend.text = element_text(size = 9),
+         legend.position = "bottom",
+         legend.spacing.x = unit(0.5, 'cm')) 
+
+```
+
+
+
+### 1.4. Según macroregión propuesta por MINSA
+
+```{r}
+trimmer <- function(x,break_limit){
+  sapply(strwrap(x, break_limit, simplify=FALSE), paste, collapse="\n")
+}
+
+tabla_mes_macro=df %>% 
+  filter(!is.na(macroregion_minsa)) %>%
+  mutate(macroregion_minsa=trimmer(macroregion_minsa,11)) %>% 
+  group_by(mes,macroregion_minsa) %>% 
+  summarise(casos=n()) %>% 
+  ungroup() %>%
+  group_by(mes) %>% 
+  summarise(macroregion_minsa,casos,total=sum(casos)) %>% 
+  ungroup() %>% 
+  mutate(Porc=round(casos/total*100,2))
+
+
+tabla_mes_macro %>% #data
+  ggplot(aes(x=mes,y=Porc,fill=macroregion_minsa,order=Porc))+
+  ggplot2::geom_bar(stat="identity")+
+  ggplot2::geom_text(aes(x =mes , y = Porc, label = Porc, group = macroregion_minsa),
+                position = position_stack(vjust = .6),inherit.aes = T,fontface="bold", size=3)+
+  labs(y="Porcentaje de casos de anemia",x="Mes",fill=" ")+
+  ggtitle("Porcentaje de casos de anemia en el año 2021, según mes y macroregión")+
+  coord_flip()+
+  scale_fill_manual(values=c("lightskyblue2","lightgoldenrod3","lightsalmon2","aquamarine2","wheat1","steelblue4"))+
+  theme_light()+
+  theme (plot.title = element_text(size=rel(1),vjust=0.5,
+                                   hjust=0.5,face="bold",
+                                   color="black", lineheight=1.5),
+         plot.caption = element_text(color = "black", face = "italic",size=7.7),
+         legend.title = element_text( size = 10, vjust=0.5,hjust=0.5),
+         legend.text = element_text(size = 7),
+         legend.position = "bottom",
+         legend.spacing.x = unit(0.1, 'cm')) 
+```
+
+## 2. Casos diagnosticados según departamento
+
+### 2.1. Número total
+
+```{r,fig.width =7 ,fig.height = 6}
+tabla_dep=df %>% 
+  filter(!is.na(DEPARTAMENTO)) %>% 
+  group_by(DEPARTAMENTO) %>% 
+  summarise(Casos_Diagnosticados=n())
+
+tabla_dep %>% #data
+  ggplot(aes(x=reorder(DEPARTAMENTO,Casos_Diagnosticados),y=Casos_Diagnosticados))+
+  ggplot2::geom_bar(stat="identity", 
+                    position = position_dodge(),
+                          fill="lightsalmon")+
+  ggplot2::geom_text(aes(label=Casos_Diagnosticados), size=3, vjust=0.5,hjust=0)+
+  labs(y="Número de casos de anemia",x="Mes")+
+  ggtitle("Número de casos de anemia en el año 2021, según departamento")+
+  coord_flip()+
+  ylim(0,7000)+
+  theme_light()+
+  theme (plot.title = element_text(size=rel(1),vjust=0.5,
+                                   hjust=0.5,face="bold",
+                                   color="black", lineheight=1.5),
+         plot.caption = element_text(color = "black", face = "italic",size=7.7),
+         legend.title = element_text( size = 10, vjust=0.5,hjust=0.5),
+         legend.text = element_text(size = 9),
+         legend.position = "bottom",
+         legend.spacing.x = unit(0.5, 'cm')) 
+```
+
+
+### 2.2. Tasa por cada 1000 habitantes
+
+```{r,fig.width =7 ,fig.height = 6}
+tabla_dep=df %>% 
+  filter(!is.na(DEPARTAMENTO)) %>% 
+  group_by(DEPARTAMENTO) %>% 
+  summarise(Casos_Diagnosticados=n()) %>%
+  ungroup() %>% left_join(ubig %>% select(DEPARTAMENTO,pob_departamento) %>% distinct(DEPARTAMENTO,pob_departamento),by="DEPARTAMENTO") %>% 
+  mutate(Casos_Diagnosticados=round(Casos_Diagnosticados/pob_departamento*1000,2)) %>% na.omit()
+tabla_dep %>% #data
+  ggplot(aes(x=reorder(DEPARTAMENTO,Casos_Diagnosticados),y=Casos_Diagnosticados))+
+  ggplot2::geom_bar(stat="identity", 
+                    position = position_dodge(),
+                          fill="lightsalmon")+
+  ggplot2::geom_text(aes(label=Casos_Diagnosticados), size=3, vjust=0.5,hjust=0)+
+  labs(y="Tasa de anemia",x="Mes")+
+  ggtitle("Tasa de anemia en el año 2021, según departamento")+
+  coord_flip()+
+  theme_light()+
+  theme (plot.title = element_text(size=rel(1),vjust=0.5,
+                                   hjust=0.5,face="bold",
+                                   color="black", lineheight=1.5),
+         plot.caption = element_text(color = "black", face = "italic",size=7.7),
+         legend.title = element_text( size = 10, vjust=0.5,hjust=0.5),
+         legend.text = element_text(size = 9),
+         legend.position = "bottom",
+         legend.spacing.x = unit(0.5, 'cm')) 
+```
+
+
+
+
+### 2.3. Porcentaje según departamento y sexo
+
+```{r,fig.width =7 ,fig.height = 6}
+tabla_dep=df %>% 
+  filter(!is.na(DEPARTAMENTO))%>% 
+  mutate(Sexo=ifelse(Sexo=="F","Mujer","Hombre")) %>% 
+  group_by(DEPARTAMENTO,Sexo) %>% 
+  summarise(Casos_Diagnosticados=n()) %>% 
+  ungroup() %>% 
+  group_by(DEPARTAMENTO) %>% 
+  summarise(Sexo,Casos_Diagnosticados,total=sum(Casos_Diagnosticados)) %>% 
+  mutate(Porc=round(Casos_Diagnosticados/total*100,2))
+
+tabla_dep %>% #data
+  ggplot(aes(x=DEPARTAMENTO,y=Porc,fill=Sexo,order=Porc))+
+  ggplot2::geom_bar(stat="identity")+
+  ggplot2::geom_text(aes(x =DEPARTAMENTO , y = Porc, label = Porc, group = Sexo),
+                position = position_stack(vjust = .6),inherit.aes = T,fontface="bold", size=3)+
+  labs(y="Porcentaje de casos de anemia",x="Mes")+
+  ggtitle("Porcentaje de casos de anemia en el año 2021, según departamento y sexo")+
+  coord_flip()+
+  scale_fill_manual(values=c("lightcyan3","lightsalmon2"))+
+  theme_light()+
+  theme (plot.title = element_text(size=rel(1),vjust=0.5,
+                                   hjust=0.5,face="bold",
+                                   color="black", lineheight=1.5),
+         plot.caption = element_text(color = "black", face = "italic",size=7.7),
+         legend.title = element_text( size = 10, vjust=0.5,hjust=0.5),
+         legend.text = element_text(size = 9),
+         legend.position = "bottom",
+         legend.spacing.x = unit(0.5, 'cm')) 
+```
+
+
+### 2.4. Porcentaje según grupos de edad
+
+```{r,fig.width =7 ,fig.height = 6}
+tabla_dep=df%>% 
+  filter(!is.na(DEPARTAMENTO)) %>% 
+  mutate(GrupoEdad=case_when(Tipo_edad=="D"~"Menor de 1 mes",
+                             Tipo_edad=="M"~"Menor de 1 año",
+                             Tipo_edad=="A" & Edad %in% c(1:3)~"1-3 años",
+                             Tipo_edad=="A" & Edad %in% c(4:6)~"4-6 años",
+                             Tipo_edad=="A" & Edad %in% c(7:9)~"7-9 años",
+                             Tipo_edad=="A" & Edad %in% c(10:11)~"10-11 años")) %>% 
+  group_by(DEPARTAMENTO,GrupoEdad) %>% 
+  summarise(Casos_Diagnosticados=n()) %>% 
+  ungroup() %>% 
+  group_by(DEPARTAMENTO) %>% 
+  summarise(GrupoEdad,Casos_Diagnosticados,total=sum(Casos_Diagnosticados)) %>% 
+  mutate(Porc=round(Casos_Diagnosticados/total*100,2))
+
+
+#tabla_mes$GrupoEdad=factor(tabla_mes$GrupoEdad,levels=c("10-11 años","7-9 años","4-6 años","1-3 años","Menor de 1 año","Menor de 1 mes",ordered=TRUE))
+tabla_dep$GrupoEdad=factor(tabla_dep$GrupoEdad,levels=c("Menor de 1 mes","Menor de 1 año","1-3 años","4-6 años","7-9 años","10-11 años",ordered=TRUE))
+
+tabla_dep %>% #data
+  ggplot(aes(x=DEPARTAMENTO,y=Porc,fill=GrupoEdad,order=Porc))+
+  ggplot2::geom_bar(stat="identity")+
+  ggplot2::geom_text(aes(x =DEPARTAMENTO , y = Porc, label = Porc, group = GrupoEdad),
+                position = position_stack(vjust = .6),inherit.aes = T,fontface="bold", size=3)+
+  labs(y="Porcentaje de casos de anemia",x="Mes")+
+  ggtitle("Porcentaje de casos de anemia en el año 2021, según mes y grupo etario")+
+  coord_flip()+
+  scale_fill_manual(values=c("slateblue1","thistle3","lightsalmon2","turquoise3","turquoise4","steelblue4"))+
+  theme_light()+
+  theme (plot.title = element_text(size=rel(1),vjust=0.5,
+                                   hjust=0.5,face="bold",
+                                   color="black", lineheight=1.5),
+         plot.caption = element_text(color = "black", face = "italic",size=7.7),
+         legend.title = element_text( size = 10, vjust=0.5,hjust=0.5),
+         legend.text = element_text(size = 9),
+         legend.position = "bottom",
+         legend.spacing.x = unit(0.5, 'cm')) 
+```
+
+### Mapa del Perú de la tasa de anemia por cada 1000 habitantes
+
+```{r,fig.width =7 ,fig.height = 7}
+path <- file.path("Shape", "Departamental_shp", "BAS_LIM_DEPARTAMENTO.shp")
+dep <- read_sf(path)
+names(dep)<- c("DEPARTAMENTO","COUNT","FIRST_IDDP","HECTARES","geometry")
+
+
+tabla_dep=df %>% 
+  filter(!is.na(DEPARTAMENTO)) %>% 
+  group_by(DEPARTAMENTO) %>% 
+  summarise(Casos_Diagnosticados=n()) %>%
+  ungroup() %>% left_join(ubig %>% select(DEPARTAMENTO,pob_departamento) %>% distinct(DEPARTAMENTO,pob_departamento),by="DEPARTAMENTO") %>% 
+  mutate(Casos_Diagnosticados=round(Casos_Diagnosticados/pob_departamento*1000,2)) %>% na.omit()
+
+
+dep %>% 
+  inner_join(tabla_dep, by = "DEPARTAMENTO") %>% 
+  ggplot()+
+  geom_sf(aes(fill = Casos_Diagnosticados))+
+  scale_fill_gradient(low = "lavenderblush",
+                       high = "indianred3")+
+ 
+   labs(title = "Tasa de anemia",
+       subtitle = "Año 2021",
+       caption = "Fuente: Plataforma Nacional de Datos Abiertos. Elaboración propia",
+       fill = " ")+
+  guides(fill = guide_colourbar(barwidth = 0.5, barheight = 5))+
+  theme(plot.title = element_text(size=rel(1.5),vjust=0.5,
+                                   hjust=0.5,face="bold",
+                                   color="black", lineheight=1.5),
+        plot.subtitle = element_text(size=rel(1),vjust=0.5,
+                                   hjust=0.5,face="bold",
+                                   color="black", lineheight=1.5),
+        legend.position = c(0.01, 0.01),
+        legend.justification = c(0, 0),
+        legend.background = element_rect(fill = NA),
+        legend.text = element_text(size = 8),
+        legend.title = element_text(size = 9),
+        panel.border = element_rect(colour = "black", fill = NA),
+        panel.background = element_blank(),
+        plot.caption=element_text(size=8, face="italic", color="black"))
+```
+
+
+
+En el cuadro presentado a continuación se muestra que, en promedio,los departamentos han presentado una tasa de 1.1044 casos de anemia por cada 1000 habitantes, el departamento con menores casos es Tacna (0.34) y el que tiene mayores casos es Loreto (2.84). El 25% del total de departamentos ha presentado una tasa de anemia menor o igual a 0.68 y el 75% del total ha presentado una tasa de anemia menor o igual a 1.15.
+
+```{r}
+tabla_dep %>% 
+  summarise(Promedio_Casos=mean(Casos_Diagnosticados),
+            Min_casos_diagnosticados=min(Casos_Diagnosticados),
+            Max_casos_diagnosticados=max(Casos_Diagnosticados),
+            Percentil_25=quantile(Casos_Diagnosticados,0.25),
+            Percentil_75=quantile(Casos_Diagnosticados,0.75)) %>% 
+  kbl(caption = "Estadísticos sobre casos positivos de Anemia, según departamento") %>%
+  kable_classic(full_width = F, html_font = "Cambria")
+```
+
+## 3. Factores relacionados a la anemia: el acceso a agua
+
+```{r}
+ubig1=read.csv("https://docs.google.com/spreadsheets/d/e/2PACX-1vTHrsPJlW1NE7ma8--Q9O4LSK2QGD8CXam9qBPRMTOY8xC8mV1Qfw-hwRr3rsSblw/pub?output=csv",encoding="UTF-8")
+enaho=read.csv("https://docs.google.com/spreadsheets/d/e/2PACX-1vSVq1Xix4Q8CFnEOnD12HhNrL9BN_e7NdqztyHiqqUKIFh6rl4qEpHgy00_X7HBxg/pub?output=csv",encoding="UTF-8")
+```
+
+Los factores involucrados con la anemia están relacionados tanto a la calidad de alimentación, pero también a factores como el saneamiento y acceso a agua potable. De acuerdo al Instituto Nacional de Estadística e Informática (2018) y Curo (2019), la falta de acceso a agua somete a los habitantes a consumir agua contaminada que contiene parásitos que terminan consumiendo, entre varios elementos, el hierro. Por ello, una estrategia contra la anemia debería tener como eje principal lograr el mayor acceso posible a agua potable.
+
+El gráfico a continuación  muestra que efectivamente existe una relación lineal indirecta entre el número de casos de anemia y el acceso a agua mediante red pública.
+
+```{r,fig.width =7 ,fig.height = 5.5}
+tab=enaho %>% 
+  left_join(ubig1 %>% select(UBIGEO=ubigeo_inei,DEPARTAMENTO=departamento),by="UBIGEO") %>% 
+  mutate(agua=ifelse(P110 %in% c(1,2),"Red pública","Otros")) %>% 
+  group_by(agua,DEPARTAMENTO) %>% 
+  summarise(TRP=n()) %>% 
+  ungroup() %>% 
+  group_by(DEPARTAMENTO) %>% 
+  summarise(agua,TRP,total=sum(TRP)) %>% 
+  mutate(Porc_not_RP_agua=round(TRP/total*100,2)) %>% 
+  filter(agua=="Red pública") %>% 
+  left_join(tabla_dep,by="DEPARTAMENTO") %>% 
+  select(-c(agua,TRP)) %>% 
+  left_join(df %>% select(DEPARTAMENTO,macroregion_minsa),by="DEPARTAMENTO") %>% 
+  mutate(macroregion_minsa=trimmer(macroregion_minsa,11))
+
+
+tab %>% #data
+  ggplot(aes(x=Porc_not_RP_agua,y=Casos_Diagnosticados))+
+  geom_jitter(aes(colour=macroregion_minsa))+ 
+  scale_color_manual(values=c("seagreen","goldenrod1","darkorchid3","darkred","green","yellow"))+ 
+  labs(y="Casos diagnosticados de anemia",x="Hogares con acceso a agua mediante red pública",
+       caption="Fuente: Plataforma Nacional de Datos Abiertos; INEI. Elaboración propia.",
+       fill=" ",
+       colour="")+
+  ggtitle("Relación entre los casos de anemia y el acceso a agua\nmediante red pública, año 2021")+ #title
+  theme_light()+
+  #ggplot2::geom_text(aes(label=DEPARTAMENTO), size=2, vjust=0.5,hjust=0)+
+  theme (plot.title = element_text(size=rel(1),vjust=0.5,#customize title
+                                   hjust=0.5,face="bold",
+                                   color="black", lineheight=1.5),
+         plot.caption = element_text(color = "black", face = "italic",size=7.7),#customize caption
+         legend.title = element_text( size = 10, vjust=0.5,hjust=0.5),#customize legend title
+         legend.text = element_text(size = 9),#customize legend text
+         legend.position = "bottom", #define the place of legend
+         legend.spacing.x = unit(0.1, 'cm'))+
+  geom_smooth(method=lm)
+```
+
+## Discusión
+
+El reporte presentado muestra que contrario a la hipótesis planteada, los casos de anemia han ido disminuyendo significativamente desde enero, se ha pasado de más de 11000 casos mensuales a menos de 1000 casos mensuales. Asimismo, el mapa y los estadísticos calculados en base a departamento muestran que las zonas más afectadas por esta enfermedad es la zona de oriente, donde Loreto es el departamento con mayor tasa de anemia por cada 1000 habitantes. 
+
+En línea con la hipótesis planteada, para medir cómo afecta la presencia estatal en el número de casos de anemia, se tomó la cifra de hogares que cuentan con acceso a agua proveniente de red pública y se realizó un gráfico de dispersión entre ambas variables. Se encontró que existe una relación lineal inversa que muestra la necesidad de una mayor presencia del Estado en los territorios históricamente olvidados. Sin acceso a agua potable, las estrategias que involucran un mayor consumo de hierro no tendrán impactos sostenibles en el tiempo. 
+
+En suma, a pesar de ver una reducción de casos de anemia, aún se muestra un número de casos bastante alto que debe ser tratado por las autoridades públicas, haciendo un mayor énfasis en proveer de los servicios básicos a las familias que se encuentran en condiciones de pobreza y extrema pobreza. 
+
+## Bibliografía
+
+Curo, M. C. (2019). Influencia del consumo de agua potable sobre la anemia infantil en las regiones del Perú 2010–2018. ÑAWPARISUN-Revista de investigación científica, 2(1).
+
+Dávila-Aliaga, C. R., Paucar-Zegarra, R., & Quispe, A. (2019). Anemia infantil. Revista Peruana De Investigación Materno Perinatal, 7(2), 46-52. https://doi.org/10.33421/inmp.2018118
+
+INEI. (2018). Perú: Formas De Acceso a Agua Y Sanemiento Básico. Instituto Nacional de Estadistica e Informatica.
+
+Ministerio de Salud (2021). Minsa: El 92% de menores de 6 a 11 meses con anemia iniciaron tratamiento con hierro. 
